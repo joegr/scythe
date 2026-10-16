@@ -19,7 +19,7 @@ Feature: Names, places and dates in a card
       | GPE    | India              |
       | GPE    | Pakistan           |
 
-  @partly
+  @partly @slow
   # today: the toggle is called "entities" and pointing at a name shows the raw tag, e.g. "PERSON"
   Scenario: Show the names in a card in plain words
     Given Scythe has checked the card
@@ -30,7 +30,7 @@ Feature: Names, places and dates in a card
     And pointing at "India" says "Place"
     And pointing at "2022" says "Date"
 
-  @missing @signed-in
+  @missing @slow @signed-in
   Scenario: Build quals from the names in the card
     Given I am signed in to the team's evidence
     And Scythe has checked the card

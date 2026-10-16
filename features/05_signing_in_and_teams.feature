@@ -14,6 +14,28 @@ Feature: Signing in and choosing the team's evidence
     And I see "Sign in to edit."
 
   @built
+  Scenario: A reader who isn't signed in doesn't run GitHub's limit dry
+    # Signed-out reads share 60 requests an hour per network. Reads under a minute old come from
+    # the session cache, so coming back to a card asks GitHub for nothing.
+    Given I am not signed in
+    And a card "Quiet reader <run>" with the text "Reading needs no account."
+    When I open the card
+    And I come back to the card within a minute
+    Then the card shows "Reading needs no account."
+    And coming back asked GitHub for nothing
+
+  @built @signed-in
+  Scenario: Signed in, an unchanged card costs nothing against the limit
+    # Signed in, every read revalidates with its ETag; an unchanged answer is a 304, which GitHub
+    # doesn't count. Reads stay exact, so a save always builds on the latest version.
+    Given I am signed in to the team's evidence
+    And a card "Revalidated <run>" with the text "Saves build on the latest version."
+    When I open the card
+    And I come back to the card within a minute
+    Then the card shows "Saves build on the latest version."
+    And every read of the card on coming back was answered "not modified"
+
+  @built
   Scenario: The sign-in link asks GitHub for exactly what Scythe needs
     Given I am not signed in
     When I open Scythe
@@ -46,7 +68,7 @@ Feature: Signing in and choosing the team's evidence
     Given I have a GitHub key that can read but not write the team's evidence
     When I sign in with it
     Then I see "This key can read your team's evidence but can't save to it. Make a new key and pick your team's evidence when GitHub asks where it can be used."
-    And I am not signed in
+    And I am still signed out
 
   @partly
   # today: works through settings, but the screen says "Repository (public; cards are its issues)" and "owner/repo"

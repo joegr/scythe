@@ -55,7 +55,7 @@ export async function commits(path: string): Promise<{ message: string; author: 
 }
 
 export async function issue(n: number) {
-  const i = await api('GET', `/repos/{repo}/issues/${n}`)
+  const i = await api<{ body: string; state: string; labels: { name: string }[] }>('GET', `/repos/{repo}/issues/${n}`)
   return { ...i, labelNames: i.labels.map((l: { name: string }) => l.name) as string[], meta: parseMeta<CardMeta & { processed?: { file_sha?: string } }>(i.body) }
 }
 

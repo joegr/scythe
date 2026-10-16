@@ -18,7 +18,8 @@ Feature: Finding a copied passage in a source
     Then the selection is 51 characters
     When I write the tag "Worst case <run>"
     And I cut the card
-    Then the card's text in git is exactly "“the worst thing that could happen” — a decade-long"
+    Then I am on the new card
+    And the card's text in git is exactly "“the worst thing that could happen” — a decade-long"
 
   @built @signed-in
   Scenario: A passage that isn't in the source says so
@@ -29,6 +30,7 @@ Feature: Finding a copied passage in a source
   @partly @signed-in
   # today: the message appears at the top of the reader, scrolled out of sight of the cut bar
   Scenario: The message shows next to where you pasted
+    Given that source is a full-length article
     When I open that source in the reader
     And I find the copied passage "a passage from some other article"
     Then the message is visible without scrolling

@@ -33,7 +33,7 @@ Feature: Files, blocks and approval
     And I open the file "Lib <run>"
     Then I see the block "Solvency" with the card "Filed <run>"
 
-  @partly @signed-in
+  @partly @slow @signed-in
   # today: file/block labels are only added when both are set, so a file with no block vanishes from Library
   Scenario: A file with no block still shows in the library
     When I open the card
@@ -41,7 +41,7 @@ Feature: Files, blocks and approval
     Then within 5 minutes the card's issue has the label "file:Loose <run>"
     And the library shows "Loose <run>" with the card under "Unfiled"
 
-  @partly
+  @partly @slow
   # today: labels are cut to 50 characters, so long file names are cut short and can collide
   Scenario: A long file name isn't cut short
     When I file a card under "Neg – Arctic militarization DA – Russia escalation links"

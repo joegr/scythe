@@ -33,7 +33,7 @@ export const config = {
   /** The Fly passthrough that commits cards and spans (VITE_SERVER_URL at build time). */
   server: () => (import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:8081' : '')).replace(/\/$/, ''),
   token: () => get(KEYS.token),
-  setToken: (t: string | null) => put(KEYS.token, t?.trim() || null),
+  setToken: (t: string | null) => { put(KEYS.token, t?.trim() || null); forgetReads() },
 }
 
 /** GitHub's pre-filled fine-grained token page: Contents + Issues read & write, 30 days. Pick the repo there. */
@@ -55,19 +55,70 @@ export class GitHubError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status }
 }
 
-export async function gh<T>(method: string, path: string, body?: unknown, { auth = true } = {}): Promise<{ data: T; headers: Headers }> {
+// ---------------------------------------------------------------- read cache
+//
+// Every GitHub read is remembered for the browser session with its ETag.
+// - Signed in: always revalidate. An unchanged answer is a 304, which GitHub doesn't count
+//   against the rate limit, so reads stay exact (a save must build on the real latest sha).
+// - Signed out: GitHub allows 60 requests an hour per network, 304s included. A read under a
+//   minute old is answered from memory; older ones revalidate.
+// Any write clears the cache, so the next read sees it.
+
+const SIGNED_OUT_FRESH_MS = 60_000
+const CACHE_PREFIX = 'scythe.gh.cache:'
+const MAX_STORED = 1_000_000 // characters; bigger answers stay in memory only
+interface Cached { etag: string | null; data: unknown; at: number }
+const memory = new Map<string, Cached>()
+
+function recall(key: string): Cached | undefined {
+  const hit = memory.get(key)
+  if (hit) return hit
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + key)
+    if (raw) { const c = JSON.parse(raw) as Cached; memory.set(key, c); return c }
+  } catch { /* storage blocked */ }
+  return undefined
+}
+
+function remember(key: string, c: Cached) {
+  memory.set(key, c)
+  try {
+    const raw = JSON.stringify(c)
+    if (raw.length <= MAX_STORED) sessionStorage.setItem(CACHE_PREFIX + key, raw)
+  } catch { /* quota or storage blocked: memory still has it */ }
+}
+
+/** Drop every remembered read (after a save, or a sign-in change). */
+export function forgetReads() {
+  memory.clear()
+  try {
+    for (const k of Object.keys(sessionStorage)) if (k.startsWith(CACHE_PREFIX)) sessionStorage.removeItem(k)
+  } catch { /* storage blocked */ }
+}
+
+export async function gh<T>(method: string, path: string, body?: unknown, { auth = true } = {}): Promise<{ data: T }> {
   const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
-  const token = config.token()
-  if (auth && token) headers.Authorization = `Bearer ${token}`
+  const token = auth ? config.token() : null
+  if (token) headers.Authorization = `Bearer ${token}`
   if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const url = `${config.apiBase()}${path}`
+  const key = `${token ? 'in' : 'out'} ${url}`
+  const read = method === 'GET'
+  const cached = read ? recall(key) : undefined
+  if (cached && !token && Date.now() - cached.at < SIGNED_OUT_FRESH_MS) return { data: cached.data as T }
+  if (cached?.etag) headers['If-None-Match'] = cached.etag
   let res: Response
   try {
-    // GitHub marks reads cacheable for 60s; a card re-read after a save must see that save, so
-    // always revalidate (an unchanged answer is a cheap 304 that doesn't count against the rate limit).
-    res = await fetch(`${config.apiBase()}${path}`, { method, headers, cache: 'no-cache', body: body === undefined ? undefined : JSON.stringify(body) })
+    // no-store: this cache, not the browser's, decides when to revalidate.
+    res = await fetch(url, { method, headers, cache: 'no-store', body: body === undefined ? undefined : JSON.stringify(body) })
   } catch {
     throw new GitHubError(0, `Can't reach ${config.apiBase()}.`)
   }
+  if (res.status === 304 && cached) {
+    remember(key, { ...cached, at: Date.now() })
+    return { data: cached.data as T }
+  }
+  if (!read) forgetReads()
   if (!res.ok) {
     let message = res.statusText
     try { message = (await res.json()).message ?? message } catch { /* not json */ }
@@ -77,7 +128,8 @@ export async function gh<T>(method: string, path: string, body?: unknown, { auth
     throw new GitHubError(res.status, message)
   }
   const data = res.status === 204 ? (undefined as T) : ((await res.json()) as T)
-  return { data, headers: res.headers }
+  if (read) remember(key, { etag: res.headers.get('etag'), data, at: Date.now() })
+  return { data }
 }
 
 export const repoPath = (suffix = '') => `/repos/${config.repo()}${suffix}`
@@ -151,6 +203,7 @@ export async function server<T>(method: string, path: string, body: unknown): Pr
   } catch {
     throw new GitHubError(0, config.server() ? `Can't reach the Scythe server at ${config.server()}.` : 'No Scythe server is set; add one in settings.')
   }
+  forgetReads() // a save (or someone else's, on a 409) changed what GitHub holds
   if (res.status === 409) throw new Diverged((await res.json()).theirs)
   if (!res.ok) {
     let message = res.statusText
