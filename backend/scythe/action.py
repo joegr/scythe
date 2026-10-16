@@ -139,7 +139,9 @@ def run(gh, repo: str, changes: list[tuple[str, str]], root: Path, load_nlp: Cal
     for status, path in sorted(changes, key=lambda c: not c[1].startswith("sources/")):
         if not path.endswith(".md") or not Path(path).stem.isdigit():
             continue
-        content = None if status.startswith("D") else (root / path).read_text()
+        # Read the latest version (the workflow checks out origin/main); gone since = deleted.
+        file = root / path
+        content = file.read_text() if not status.startswith("D") and file.exists() else None
         if path.startswith("cards/"):
             sync_card(gh, repo, path, content, load_nlp)
         elif path.startswith("sources/"):

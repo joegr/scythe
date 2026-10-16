@@ -13,9 +13,9 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: scythe-sync
-  cancel-in-progress: false
+# No concurrency group: GitHub keeps only one pending run per group and cancels the rest, which
+# would skip files changed by the cancelled pushes. Instead every push syncs its own changed files,
+# reading them from the latest main, so overlapping runs just repeat the same up-to-date write.
 
 jobs:
   sync:
@@ -36,6 +36,7 @@ jobs:
           PYTHONPATH: backend
           BEFORE: ${{ github.event.before }}
         run: |
+          git fetch --quiet origin main && git checkout --quiet origin/main -- cards sources 2>/dev/null || true
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             python -m scythe.action resync
           else
