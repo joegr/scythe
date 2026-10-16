@@ -23,7 +23,8 @@ Feature: A card's history, and removing a card
   # today: each entry shows a 7-character commit id and the raw commit message
   Scenario: History reads as sentences
     Given the card has a "highlight" span over "block sunlight"
-    When I open the card's history
+    When I open the card
+    And I open the card's history
     Then I see "You highlighted “block sunlight”"
 
   @missing @signed-in

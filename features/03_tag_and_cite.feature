@@ -47,14 +47,20 @@ Feature: The tag and the cite
     When I ask for quals
     Then the cite offers "Alan Robock, Rutgers University" as the quals to insert after the short cite
 
-  @partly
-  # today: a source with no date gives a cite with no year; a source with no author starts with the publication
+  @signed-in
   Scenario Outline: The short cite when the source is missing pieces
     Given a source by "<authors>" in "<publication>" on "<date>"
+    When I open that source in the reader
     Then the drafted cite starts with "<short cite>"
 
-    Examples:
+    @built
+    Examples: Scythe drafts these today
       | authors     | publication | date       | short cite     |
       | Alan Robock | Nature Food | 2022-08-15 | Robock 22      |
       |             | Nature Food | 2022-08-15 | Nature Food 22 |
+
+    @partly
+    # today: with no date the short cite is just "Robock", with nothing to say the date is missing
+    Examples: A missing date is said out loud
+      | authors     | publication | date       | short cite     |
       | Alan Robock | Nature Food |            | Robock No Date |

@@ -1,14 +1,15 @@
-# Builds the static frontend and publishes it to GitHub Pages.
+# Runs every feature in features/ against real GitHub, then builds the static frontend and
+# publishes it to GitHub Pages. Nothing deploys unless the features pass.
 # One-time setup: Settings -> Pages -> Source: "GitHub Actions".
-# Variables (Settings -> Secrets and variables -> Actions -> Variables):
-#   SCYTHE_SERVER_URL  the Fly passthrough that commits cards and spans
-#   SCYTHE_API_URL     optional local API (search index, training); defaults to http://localhost:8000
+# Variables (Settings -> Secrets and variables -> Actions):
+#   SCYTHE_SERVER_URL (variable)  the Fly passthrough that commits cards and spans
+#   SCYTHE_TEST_TOKEN (secret)    fine-grained token with Contents + Issues write on joegr/scythe-test only
 name: Pages
 
 on:
   push:
     branches: [main]
-    paths: ["frontend/**", ".github/workflows/pages.yml"]
+    paths: ["frontend/**", "features/**", "e2e/**", "server/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -21,7 +22,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  features:
+    # @built scenarios must pass; @partly/@missing must still fail (a pass means: retag it @built).
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test token present
+        env:
+          SCYTHE_TEST_TOKEN: ${{ secrets.SCYTHE_TEST_TOKEN }}
+        run: '[ -n "$SCYTHE_TEST_TOKEN" ] || { echo "::error::Add the SCYTHE_TEST_TOKEN secret (Contents + Issues write on joegr/scythe-test)"; exit 1; }'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: npm ci
+        working-directory: frontend
+      - run: npm ci
+        working-directory: e2e
+      - name: On-screen copy the features quote is debate language
+        run: npm run voice
+        working-directory: e2e
+      - run: ./node_modules/.bin/playwright install --with-deps chromium
+        working-directory: e2e
+      - name: Every feature, including the ones that wait on the spaCy and fetch Actions
+        working-directory: e2e
+        env:
+          SCYTHE_TEST_TOKEN: ${{ secrets.SCYTHE_TEST_TOKEN }}
+          SCYTHE_E2E_SLOW: "1"
+        run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-results
+          path: e2e/test-results
+          retention-days: 7
+
   build:
+    needs: features
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,8 +76,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npx tsc -b && npx eslint src
-      - run: npx vite build
+      - run: ./node_modules/.bin/tsc -b && ./node_modules/.bin/eslint src
+      - run: ./node_modules/.bin/vite build
         env:
           VITE_SERVER_URL: ${{ vars.SCYTHE_SERVER_URL }}
       - uses: actions/upload-pages-artifact@v3

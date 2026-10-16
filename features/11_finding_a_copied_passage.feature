@@ -30,6 +30,7 @@ Feature: Finding a copied passage in a source
   @partly @signed-in
   # today: the message appears at the top of the reader, scrolled out of sight of the cut bar
   Scenario: The message shows next to where you pasted
+    Given that source is a full-length article
     When I open that source in the reader
     And I find the copied passage "a passage from some other article"
     Then the message is visible without scrolling

@@ -20,9 +20,18 @@ Pages app ──PUT {content, sha}──▶ Fly passthrough ──▶ git: cards
                                         scythe.yml (spaCy) ──▶ issue #n (view, search, backlinks)
 ```
 
+### What Scythe should do
+
+[`features/`](features/) holds 18 Gherkin features written from a debater's side, each scenario tagged `@built`, `@partly` or `@missing`. They run as browser tests against real GitHub (`make e2e`), and the Pages deploy waits for them. [`features/README.md`](features/README.md) has the gap table.
+
 ### Sign in
 
 On the Pages site, click **sign in**. It opens GitHub's pre-filled token page: a fine-grained token named `scythe` with Contents and Issues read & write and a 30-day expiry. Choose your repo under *Repository access* (GitHub can't pre-fill that field), generate the token, and paste it into Scythe. Only that browser keeps it. Reading the site needs no token at all.
+
+**GitHub's rate limits.** Signed out, GitHub allows 60 requests an hour per network. Signed in, it allows 5,000 an hour per person. Scythe remembers every GitHub read for the browser session, along with its ETag:
+- **Signed in:** each read asks GitHub whether anything changed. An unchanged answer is a 304, which doesn't count against the limit, so cards are never stale and saves always build on the latest version.
+- **Signed out:** a read under a minute old is reused without asking GitHub at all.
+- **Any save** clears what's remembered.
 
 ### Setup (once, when you're ready to publish)
 

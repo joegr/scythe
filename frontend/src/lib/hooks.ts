@@ -13,7 +13,8 @@ export function useLabelsLoader(): LabelsCtx {
   return { labels, reload }
 }
 
-/** Load a card from git; until the spaCy Action has processed this exact file version, re-check every 6s. */
+/** Load a card from git; until the spaCy Action has processed this exact file version, re-check:
+ *  6s, then backing off to once a minute (the Action usually takes about one), for up to 15 minutes. */
 export function useCard(n: number) {
   const [card, setCard] = useState<CardDoc | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -22,9 +23,17 @@ export function useCard(n: number) {
   const waiting = card !== null && !card.processed && card.state === 'open'
   useEffect(() => {
     if (!waiting) return
-    let tries = 0
-    const t = setInterval(() => { if (++tries > 20) clearInterval(t); else reload() }, 6000)
-    return () => clearInterval(t)
+    const started = Date.now()
+    let delay = 6_000
+    let t: ReturnType<typeof setTimeout>
+    const tick = () => {
+      if (Date.now() - started > 15 * 60_000) return
+      reload()
+      delay = Math.min(delay * 1.5, 60_000)
+      t = setTimeout(tick, delay)
+    }
+    t = setTimeout(tick, delay)
+    return () => clearTimeout(t)
   }, [waiting, reload])
   return { card, setCard, reload, error }
 }

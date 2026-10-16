@@ -126,7 +126,7 @@ Then('the card\'s text in git is exactly {string}', async ({ world }, text: stri
 })
 
 Then('the card\'s front matter has {string} {string}', async ({ world }, field: string, value: string) => {
-  await eventually(async () => expect((await card(world.card!) as Record<string, unknown>)[field]).toBe(world.sub(value)))
+  await eventually(async () => expect((await card(world.card!) as unknown as Record<string, unknown>)[field]).toBe(world.sub(value)))
 })
 
 Then('the card\'s front matter has "source" set to that source', async ({ world }) => {

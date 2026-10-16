@@ -178,7 +178,7 @@ When('I link it with {string} to {string}', async ({ page, world }, relation: st
     await box.fill('')
     await box.fill(world.sub(title))
     await expect(pick).toBeVisible({ timeout: 5_000 })
-  }).toPass({ timeout: 3 * 60_000 })
+  }).toPass({ timeout: 4 * 60_000, intervals: [15_000] })
   await pick.click()
 })
 
@@ -251,11 +251,15 @@ Then('within 3 minutes the results include {string}', async ({ page, world }, ti
     const q = await box.inputValue()
     await box.fill(''); await box.fill(q)
     await expect(page.locator('.card-tag', { hasText: world.sub(title) })).toBeVisible({ timeout: 8_000 })
-  }).toPass({ timeout: 3 * 60_000, intervals: [10_000] })
+  }).toPass({ timeout: 3 * 60_000, intervals: [15_000] })
 })
 
 When('I open the card\'s print page', async ({ page, world }) => {
-  await open(page, world, `/print/${world.card}`)
+  // GitHub can take a moment to serve a card created a second ago; the print page doesn't retry.
+  await expect(async () => {
+    await open(page, world, `/print/${world.card}`)
+    await expect(page.locator('.print-sheet h4')).toBeVisible({ timeout: 5_000 })
+  }).toPass({ timeout: 60_000 })
 })
 
 Then('the print shows the tag {string}', async ({ page, world }, tag: string) => {
@@ -323,4 +327,27 @@ Then('within 5 minutes the card\'s issue lists these entities:', async ({ world 
     const ents = (meta?.spans ?? []).filter((s) => s.key === 'ents').map((s) => ({ label: s.label, text: meta!.text.slice(s.start_char, s.end_char) }))
     for (const e of table.hashes()) expect(ents).toContainEqual(e)
   }, FIVE_MIN)
+})
+
+// ------------------------------------------------------------ GitHub's rate limit
+
+When('I come back to the card within a minute', async ({ page, world }) => {
+  await expect(page.locator('.card .token-text')).toBeVisible()
+  const seen: { url: string; status: number }[] = []
+  page.on('response', (r) => { if (r.url().startsWith('https://api.github.com/')) seen.push({ url: r.url(), status: r.status() }) })
+  await page.reload()
+  await expect(page.locator('.card .token-text')).toBeVisible()
+  await page.waitForTimeout(2_000) // let the page's other reads (links, history) finish
+  world.notes.comeback = JSON.stringify(seen)
+})
+
+Then('coming back asked GitHub for nothing', async ({ world }) => {
+  expect(JSON.parse(world.notes.comeback)).toEqual([])
+})
+
+Then('every read of the card on coming back was answered "not modified"', async ({ world }) => {
+  const seen = JSON.parse(world.notes.comeback) as { url: string; status: number }[]
+  const card = seen.filter((r) => /\/(contents\/cards\/\d+\.md|issues\/\d+)$/.test(r.url))
+  expect(card.length).toBeGreaterThan(0)
+  expect(card.map((r) => r.status)).toEqual(card.map(() => 304))
 })

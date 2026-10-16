@@ -1,4 +1,4 @@
-.PHONY: db api server web test train migrate install
+.PHONY: db api server web test train migrate install e2e e2e-all
 
 install:
 	cd backend && uv sync
@@ -23,7 +23,15 @@ web:
 
 test:
 	cd backend && uv run pytest -q
-	cd frontend && npx tsc -b && npx eslint src
+	cd frontend && ./node_modules/.bin/tsc -b && ./node_modules/.bin/eslint src
 
 train:
 	cd backend && uv run python -m scythe.train $(ARGS)
+
+# Every feature in features/ against joegr/scythe-test (needs `gh auth login`).
+e2e:
+	cd e2e && SCYTHE_TEST_TOKEN=$$(gh auth token) npm run e2e
+
+# ...including the scenarios that wait on the GitHub Actions (several minutes).
+e2e-all:
+	cd e2e && SCYTHE_TEST_TOKEN=$$(gh auth token) SCYTHE_E2E_SLOW=1 npm run e2e

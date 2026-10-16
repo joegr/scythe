@@ -13,6 +13,8 @@ export interface World {
   source?: number
   /** localStorage the app should start with, applied once per page before its first load. */
   storage: Record<string, string | null>
+  /** Values a later step compares against (a tag typed, a cite seen, who won a race). */
+  notes: Record<string, string>
   /** Expand <run>, <n>, <first>, <other>, <source> in step text. */
   sub: (s: string) => string
 }
@@ -23,7 +25,10 @@ export const test = base.extend<{ world: World; debaters: Debaters }>({
   world: async ({}, use) => {
     const w: World = {
       run: Math.random().toString(36).slice(2, 8),
-      storage: { 'scythe.topic': JSON.stringify({ ...topic(DEFAULT_TOPIC), origin: 'nsda' }) },
+      notes: {},
+      // Test pages read as the test key by default: signed-out reads share GitHub's 60-an-hour
+      // limit per network (and CI runners share networks). "I am not signed in" clears it.
+      storage: { 'scythe.topic': JSON.stringify({ ...topic(DEFAULT_TOPIC), origin: 'nsda' }), 'scythe.gh.token': TOKEN },
       sub: (s) => s
         .replace(/<run>/g, w.run)
         .replace(/<n>|<first>/g, () => String(w.card ?? '<n>'))
@@ -46,7 +51,17 @@ export const test = base.extend<{ world: World; debaters: Debaters }>({
   },
 })
 
-export const { Given, When, Then } = createBdd(test)
+export const { Given, When, Then, Before } = createBdd(test)
+
+/** A gap in the features is an expected failure; when it starts passing, retag it @built. */
+Before({ tags: '@partly or @missing' }, async ({ $test }) => {
+  $test.fail()
+})
+
+/** For steps that describe a screen or behavior Scythe doesn't have yet. */
+export function notBuilt(what: string): never {
+  throw new Error(`not built yet: ${what}`)
+}
 
 const primed = new WeakSet<Page>()
 

@@ -59,13 +59,13 @@ Then('exactly one of their saves lands', async ({ debaters, world }) => {
   const f = await card(world.card!)
   const marks = f.spans.map((s) => `${s.label} ${spanText(f, s)}`)
   expect(marks.length).toBe(1)
-  world.storage['e2e.winner'] = (await stopped(ana).count()) ? 'ben' : 'ana'
-  world.storage['e2e.landed'] = marks[0]
+  world.notes.winner = (await stopped(ana).count()) ? 'ben' : 'ana'
+  world.notes.landed = marks[0]
 })
 
 Then('the other is shown the change that landed and their own unsaved change', async ({ debaters, world }) => {
-  const loser = world.storage['e2e.winner'] === 'ana' ? debaters.ben : debaters.ana
-  const [landedLabel, ...words] = world.storage['e2e.landed']!.split(' ')
+  const loser = world.notes.winner === 'ana' ? debaters.ben : debaters.ana
+  const [landedLabel, ...words] = world.notes.landed!.split(' ')
   const lists = stopped(loser).locator('pre.md')
   await expect(lists.nth(0)).toContainText(`+ ${landedLabel} “${words.join(' ')}”`)
   await expect(lists.nth(1)).toContainText('+ ')
