@@ -13,6 +13,7 @@ non-fast-forward push) and this returns 409 with their version: a divergence.
                                                                   article fetcher Action
 """
 
+import asyncio
 import base64
 import json
 import os
@@ -95,13 +96,28 @@ def b64(text: str) -> str:
     return base64.b64encode(text.encode()).decode()
 
 
-async def commit(request: Request, repo: str, path: str, content: str, message: str, sha: str | None = None) -> dict:
-    body = {"message": message, "content": b64(content), **({"sha": sha} if sha else {})}
+async def file_sha(request: Request, repo: str, path: str) -> str | None:
     try:
-        out = await gh(request, "PUT", f"/repos/{repo}/contents/{path}", body)
-    except Diverged:
-        raise Diverged(repo, path) from None
-    return {"sha": out["content"]["sha"], "commit": out["commit"]["sha"]}
+        return (await gh(request, "GET", f"/repos/{repo}/contents/{path}"))["sha"]
+    except HTTPException as e:
+        if e.status_code == 404:
+            return None
+        raise
+
+
+async def commit(request: Request, repo: str, path: str, content: str, message: str, sha: str | None = None) -> dict:
+    """GitHub also answers 409 when the branch moved under a commit to some other file. Only a
+    change to this file is a divergence; otherwise retry on the new branch tip."""
+    body = {"message": message, "content": b64(content), **({"sha": sha} if sha else {})}
+    for attempt in range(6):
+        try:
+            out = await gh(request, "PUT", f"/repos/{repo}/contents/{path}", body)
+            return {"sha": out["content"]["sha"], "commit": out["commit"]["sha"]}
+        except Diverged:
+            if await file_sha(request, repo, path) != sha:
+                raise Diverged(repo, path) from None
+            await asyncio.sleep(0.25 * 2 ** attempt)
+    raise Diverged(repo, path)
 
 
 @app.exception_handler(Diverged)

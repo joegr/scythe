@@ -97,28 +97,19 @@ function SignIn() {
 
 function Settings({ onDone }: { onDone: () => void }) {
   const [repo, setRepo] = useState(config.repo())
-  const [api, setApi] = useState(config.apiBase())
-  const [localApi, setLocalApi] = useState(config.localApi())
-  const [srv, setSrv] = useState(config.server())
+  const valid = /^[\w.-]+\/[\w.-]+$/.test(repo.trim())
   return (
     <div className="page stack" style={{ paddingTop: '15vh' }}>
       <h1>scythe</h1>
       <p>Debate cards as GitHub issues: cut them from sources, label them for spaCy, and keep their history in git.</p>
       <div className="gap">
         <label>Repository (public; cards are its issues)</label>
-        <input className="field" placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)} />
-        <label>GitHub API</label>
-        <input className="field" value={api} onChange={(e) => setApi(e.target.value)} />
-        <label>Scythe server (commits cards and spans)</label>
-        <input className="field" value={srv} onChange={(e) => setSrv(e.target.value)} />
-        <label>Local Scythe API (optional: search index, training; e.g. http://localhost:8000)</label>
-        <input className="field" value={localApi} onChange={(e) => setLocalApi(e.target.value)} />
-        <button className="action" disabled={!/^[\w.-]+\/[\w.-]+$/.test(repo.trim())} onClick={() => {
-          const switchedApi = api.trim() !== config.apiBase()
-          config.setRepo(repo); config.setApiBase(api === 'https://api.github.com' ? null : api); config.setLocalApi(localApi); config.setServer(srv)
-          if (switchedApi) config.setToken(null)
-          onDone()
-        }}>Save</button>
+        <input className="field" placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && valid && (config.setRepo(repo), onDone())} />
+        <div className="row">
+          <button className="action" disabled={!valid} onClick={() => { config.setRepo(repo); onDone() }}>Save</button>
+          {config.repo() && <button className="link" onClick={onDone}>cancel</button>}
+        </div>
       </div>
     </div>
   )

@@ -82,3 +82,29 @@ def test_repo_comes_from_the_path(passthrough):
     assert r.status_code == 403 and REPO in r.json()["detail"]
     passthrough.server.REPOS = {REPO}
     assert passthrough.post(f"/repos/{REPO}/cards", json=body).status_code == 201
+
+
+def test_branch_race_on_another_file_is_retried_not_diverged(passthrough, fake_gh):
+    """GitHub 409s a contents PUT when main moved under it, even for a different file."""
+    inner = passthrough.server.TRANSPORT
+    refused = []
+
+    class BranchRace(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request):
+            if request.method == "PUT" and not refused:
+                refused.append(request.url.path)
+                return httpx.Response(409, json={"message": "is at abc but expected def"})
+            return await inner.handle_async_request(request)
+
+    passthrough.server.TRANSPORT = BranchRace()
+    created = passthrough.post(f"/repos/{REPO}/cards", json={"title": "Soot", "labels": ["scythe:card"], "content": card_file(_card())})
+    assert created.status_code == 201, created.text
+    n, base = created.json()["number"], created.json()["sha"]
+    assert refused  # the first commit really was refused once
+
+    refused.clear()
+    marked = _card(spans=[{"label": "underline", "key": "sc", "style": "underline", "start_char": 0, "end_char": 4, "src": "manual"}])
+    marked["issue"] = n
+    saved = passthrough.put(f"/repos/{REPO}/cards/{n}", json={"content": card_file(marked), "sha": base, "message": "underline: Soot"})
+    assert saved.status_code == 200, saved.text
+    assert refused

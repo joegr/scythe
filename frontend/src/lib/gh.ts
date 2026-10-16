@@ -2,12 +2,13 @@
  * The browser talks to GitHub directly: issues are the database.
  *
  * Repo: VITE_SCYTHE_REPO at build time, else derived from the Pages URL (<owner>.github.io/<repo>/),
- * overridable per browser. Sign-in: a fine-grained token created from a pre-filled GitHub link
+ * overridable per browser (choosing a team). Where Scythe saves (GitHub API, passthrough, local API) is fixed by
+ * the build and can't be changed in the browser. Sign-in: a fine-grained token created from a pre-filled GitHub link
  * (Contents and Issues: write on the chosen repo), stored only in this browser. Reads work without a token
  * because the repo is public.
  */
 
-const KEYS = { token: 'scythe.gh.token', repo: 'scythe.gh.repo', api: 'scythe.gh.api', localApi: 'scythe.api', server: 'scythe.server' }
+const KEYS = { token: 'scythe.gh.token', repo: 'scythe.gh.repo' }
 
 function get(key: string): string | null {
   try { return localStorage.getItem(key) } catch { return null }
@@ -26,14 +27,11 @@ export const config = {
   repo: () => get(KEYS.repo) || import.meta.env.VITE_SCYTHE_REPO || repoFromLocation() || '',
   setRepo: (r: string | null) => put(KEYS.repo, r?.trim() || null),
   /** https://api.github.com (or a GitHub Enterprise API). */
-  apiBase: () => (get(KEYS.api) || import.meta.env.VITE_GITHUB_API || 'https://api.github.com').replace(/\/$/, ''),
-  setApiBase: (u: string | null) => put(KEYS.api, u?.trim() || null),
-  /** Optional local Scythe API (index, training). Only `npm run dev` assumes one; the Pages build has none unless set here. */
-  localApi: () => (get(KEYS.localApi) || import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, ''),
-  setLocalApi: (u: string | null) => put(KEYS.localApi, u?.trim() || null),
+  apiBase: () => (import.meta.env.VITE_GITHUB_API || 'https://api.github.com').replace(/\/$/, ''),
+  /** Optional local Scythe API (index, training): VITE_API_URL, else localhost:8000 under `npm run dev`; none in the Pages build. */
+  localApi: () => (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, ''),
   /** The Fly passthrough that commits cards and spans (VITE_SERVER_URL at build time). */
-  server: () => (get(KEYS.server) || import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:8081' : '')).replace(/\/$/, ''),
-  setServer: (u: string | null) => put(KEYS.server, u?.trim() || null),
+  server: () => (import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:8081' : '')).replace(/\/$/, ''),
   token: () => get(KEYS.token),
   setToken: (t: string | null) => put(KEYS.token, t?.trim() || null),
 }
@@ -64,7 +62,9 @@ export async function gh<T>(method: string, path: string, body?: unknown, { auth
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
-    res = await fetch(`${config.apiBase()}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    // GitHub marks reads cacheable for 60s; a card re-read after a save must see that save, so
+    // always revalidate (an unchanged answer is a cheap 304 that doesn't count against the rate limit).
+    res = await fetch(`${config.apiBase()}${path}`, { method, headers, cache: 'no-cache', body: body === undefined ? undefined : JSON.stringify(body) })
   } catch {
     throw new GitHubError(0, `Can't reach ${config.apiBase()}.`)
   }
