@@ -1,0 +1,65 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api-fake-github",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "SCYTHE_GITHUB_FAKE=1",
+        "uv",
+        "--directory",
+        "backend",
+        "run",
+        "uvicorn",
+        "scythe.main:app",
+        "--reload",
+        "--port",
+        "8000"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "server-fake",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "SCYTHE_REPO=scythe-dev/cards",
+        "GITHUB_API=http://localhost:8000/fakegh",
+        "ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173",
+        "uv",
+        "--directory",
+        "backend",
+        "run",
+        "uvicorn",
+        "--app-dir",
+        "../server",
+        "main:app",
+        "--port",
+        "8080",
+        "--reload",
+        "--reload-dir",
+        "../server"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && npx vite build && npx vite preview --port 4173 --strictPort"
+      ],
+      "port": 4173
+    }
+  ]
+}

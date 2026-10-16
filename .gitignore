@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Node / Vite
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+.vite/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# spaCy artifacts (trained models, exported corpora, training logs)
+models/
+*.spacy
+corpus/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.claude/settings.local.json
+.fake-github.json
+.scythe-secret

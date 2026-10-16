@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
+
+/* One family, one size, one ink. Hierarchy comes from weight and space only; card formatting is
+   drawn exclusively with underlines (thin = underline, heavy = highlight, double = emphasis). */
+:root {
+  --paper: #fbfaf7;
+  --ink: #16171a;
+  --rule: #dedbd3;
+  --accent: #2f5d62;
+  --size: 18px;
+  --leading: 1.65;
+  --measure: 40rem;
+  --font: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: var(--size); }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 1rem/var(--leading) var(--font);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, p, ul, ol, pre, figure { margin: 0; }
+h1, h2, h3, h4, strong, b { font-size: 1rem; font-weight: 600; }
+button, input, select, textarea { font: inherit; color: inherit; }
+::placeholder { color: var(--ink); opacity: 1; font-style: italic; }
+::selection { background: rgba(47, 93, 98, .22); }
+
+/* Links and controls: a thin ink underline set slightly lower than card formatting. */
+a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .3em; text-decoration-color: var(--ink); }
+a:hover { text-decoration-thickness: 2px; }
+
+/* ---------- layout ---------- */
+.page { max-width: var(--measure); margin: 0 auto; padding: 0 1rem 6rem; }
+.top { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; align-items: baseline; padding: 1.5rem 0 3rem; }
+.top .brand { font-weight: 600; text-decoration: none; margin-right: auto; }
+.top a { text-decoration: none; }
+.top a.active { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: .3em; }
+.stack > * + * { margin-top: 3rem; }
+.gap > * + * { margin-top: 1rem; }
+.row { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: baseline; }
+.spacer { margin-left: auto; }
+.center { text-align: center; }
+.section { margin-top: 3.5rem; }
+
+/* ---------- plain controls: words, not widgets ---------- */
+.link { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px;
+  text-underline-offset: .3em; text-decoration-color: var(--ink); }
+.link:hover:not(:disabled) { text-decoration-thickness: 2px; }
+.link:disabled { cursor: default; text-decoration: none; }
+.link.on { text-decoration-thickness: 3px; }
+.field { width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--rule); padding: .35rem 0; outline: none; }
+.field:focus { border-bottom-color: var(--ink); }
+textarea.field { resize: vertical; border: 1px solid var(--rule); padding: .6rem .75rem; }
+textarea.field:focus { border-color: var(--ink); }
+select.field { appearance: none; cursor: pointer; }
+.action { background: var(--ink); color: var(--paper); border: 0; padding: .45rem 1.1rem; cursor: pointer; }
+.action:disabled { cursor: default; background: var(--rule); color: var(--ink); }
+.error { border-left: 2px solid #9b2c2c; padding-left: .75rem; }
+.note { border-left: 2px solid var(--rule); padding-left: .75rem; }
+kbd { font: inherit; border-bottom: 1px solid var(--ink); }
+
+/* ---------- the card ---------- */
+.card { border-top: 1px solid var(--rule); padding-top: 1.25rem; }
+.card-tag { font-weight: 600; }
+.card-tag a { text-decoration: none; }
+.card-tag a:hover { text-decoration: underline; }
+.card-tag input { font-weight: 600; }
+.card-cite { margin-top: .15rem; }
+.card-cite strong { font-weight: 600; }
+.card-body { margin-top: 1rem; }
+.card-meta { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+
+.token-text p + p { margin-top: .9rem; }
+.token-text.editable { cursor: text; }
+.t-u, .t-hl, .t-em { text-decoration-line: underline; text-decoration-color: var(--ink); text-underline-offset: .22em; text-decoration-skip-ink: none; }
+.t-u { text-decoration-thickness: 1px; }
+.t-hl { text-decoration-thickness: 3px; }
+.t-em { text-decoration-style: double; text-decoration-thickness: 1px; }
+.t-hl.t-em { text-decoration-thickness: 2px; }
+.t-custom { text-decoration-line: underline; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+.t-ner { text-decoration: underline dotted var(--ink); text-underline-offset: .3em; }
+.t-suggest { text-decoration: underline dashed var(--accent); text-decoration-thickness: 2px; text-underline-offset: .22em; cursor: pointer; }
+.t-active { text-decoration-color: var(--accent) !important; }
+.t-mark { text-decoration: underline wavy var(--accent); text-underline-offset: .25em; }
+.token-text [data-span] { cursor: pointer; }
+.md { white-space: pre-wrap; word-break: break-word; font: inherit; }
+
+/* ---------- reader ---------- */
+dialog.sheet { border: 0; padding: 0; margin: 0; width: 100%; max-width: none; height: 100%; max-height: none;
+  background: var(--paper); color: var(--ink); }
+dialog.sheet::backdrop { background: var(--paper); }
+.sheet-inner { max-width: var(--measure); margin: 0 auto; padding: 1.5rem 1rem 12rem; }
+.reader-text p + p { margin-top: 1rem; }
+.reader-sel { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: .22em; }
+.cut-bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 1px solid var(--rule); }
+.cut-bar .inner { max-width: var(--measure); margin: 0 auto; padding: 1rem; }
+
+/* ---------- lists ---------- */
+.list { list-style: none; padding: 0; }
+.list > li { padding: .55rem 0; border-top: 1px solid var(--rule); }
+.list > li:first-child { border-top: 0; }
+.list button.link { text-align: left; }
+
+/* ---------- print (from canonical Markdown) ---------- */
+.print-sheet h1, .print-sheet h3 { margin: 2rem 0 1rem; }
+.print-sheet h4 { margin: 2rem 0 .15rem; }
+.print-sheet p { margin-top: .75rem; }
+.print-sheet h4 + p { margin-top: 0; }
+.print-sheet u, .print-sheet mark, .print-sheet strong { background: none; color: inherit; font-weight: inherit;
+  text-decoration-line: underline; text-decoration-color: var(--ink); text-underline-offset: .22em; text-decoration-skip-ink: none; }
+.print-sheet u { text-decoration-thickness: 1px; }
+.print-sheet mark { text-decoration-thickness: 3px; }
+.print-sheet strong { text-decoration-style: double; }
+.print-sheet h4 + p strong { text-decoration: none; font-weight: 600; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .page { max-width: none; padding: 0; }
+}
+
+.link.plain { text-decoration: none; }
+.link.plain:hover { text-decoration: underline; text-decoration-thickness: 1px; }
+label { display: block; margin-top: 1rem; }
+code { font: inherit; }

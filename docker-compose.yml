@@ -1,0 +1,18 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: scythe
+      POSTGRES_PASSWORD: scythe
+      POSTGRES_DB: scythe
+    ports:
+      - "5544:5432"
+    volumes:
+      - scythe_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scythe"]
+      interval: 2s
+      retries: 20
+
+volumes:
+  scythe_pg:

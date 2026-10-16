@@ -1,0 +1,27 @@
+# Scythe passthrough: stateless FastAPI, scales to zero.
+app = "scythe-passthrough"
+primary_region = "iad"
+
+[build]
+
+[env]
+  SCYTHE_REPO = "joegr/scythe"
+  ALLOWED_ORIGINS = "https://joegr.github.io,http://localhost:5173,http://localhost:4173"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "5s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "3s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
