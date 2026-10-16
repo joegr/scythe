@@ -10,9 +10,10 @@ permissions:
   contents: write
   issues: write
 
+# Opening an issue with a label fires both `opened` and `labeled`: keep one run per issue.
 concurrency:
-  group: scythe-fetch
-  cancel-in-progress: false
+  group: scythe-fetch-${{ github.event.issue.number }}
+  cancel-in-progress: true
 
 jobs:
   fetch:
@@ -23,19 +24,30 @@ jobs:
         working-directory: .github/fetcher
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Already fetched?
+        id: done
+        working-directory: .
+        run: |
+          git pull --quiet --rebase origin main
+          if [ -f "sources/${{ github.event.issue.number }}.md" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "already fetched"; fi
+      - if: steps.done.outputs.skip != 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: .github/fetcher/package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - if: steps.done.outputs.skip != 'true'
+        run: npm ci
+      - if: steps.done.outputs.skip != 'true'
+        run: npx playwright install --with-deps chromium
       - name: Fetch, strip, write
+        if: steps.done.outputs.skip != 'true'
         working-directory: .
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node .github/fetcher/fetch.mjs
       - name: Commit
+        if: steps.done.outputs.skip != 'true'
         working-directory: .
         run: |
           git add sources
