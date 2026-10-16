@@ -33,7 +33,8 @@ Feature: Cutting a card from a source
     And I select " soot from burning cities " in the source
     And I write the tag "Soot <run>"
     And I cut the card
-    Then the card's text in git is exactly "soot from burning cities"
+    Then I am on the new card
+    And the card's text in git is exactly "soot from burning cities"
 
   @built @signed-in
   Scenario: A card needs a tag before it can be cut

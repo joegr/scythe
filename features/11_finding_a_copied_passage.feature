@@ -18,7 +18,8 @@ Feature: Finding a copied passage in a source
     Then the selection is 51 characters
     When I write the tag "Worst case <run>"
     And I cut the card
-    Then the card's text in git is exactly "“the worst thing that could happen” — a decade-long"
+    Then I am on the new card
+    And the card's text in git is exactly "“the worst thing that could happen” — a decade-long"
 
   @built @signed-in
   Scenario: A passage that isn't in the source says so
