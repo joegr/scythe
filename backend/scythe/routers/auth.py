@@ -42,7 +42,7 @@ def config():
 def login(return_to: str, session: Session = Depends(get_session)):
     """Start sign-in. `return_to` is the frontend page to come back to (must be an allowed origin)."""
     if not auth.configured():
-        raise HTTPException(503, "GitHub App not configured; set SCYTHE_GITHUB_CLIENT_ID/SECRET or SCYTHE_GITHUB_FAKE=1")
+        raise HTTPException(503, "GitHub App not configured; set SCYTHE_GITHUB_CLIENT_ID/SECRET, or sign in with a GitHub token")
     target = auth.allowed_return(return_to)
     if settings.github_fake:
         return _finish(session, None, target)

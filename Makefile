@@ -1,4 +1,4 @@
-.PHONY: db api web test train migrate install
+.PHONY: db api server web test train migrate install
 
 install:
 	cd backend && uv sync
@@ -14,6 +14,9 @@ migrate:
 
 api: migrate
 	cd backend && uv run uvicorn scythe.main:app --reload --port 8000
+
+server:
+	cd backend && ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173 uv run uvicorn --app-dir ../server main:app --reload --reload-dir ../server --port 8081
 
 web:
 	cd frontend && npm run dev

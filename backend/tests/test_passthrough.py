@@ -20,9 +20,10 @@ def passthrough():
     spec = importlib.util.spec_from_file_location("scythe_server", SERVER)
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)
-    server.REPO, server.GITHUB = REPO, "http://fake/fakegh"
+    server.GITHUB = "http://fake/fakegh"
     server.TRANSPORT = httpx.ASGITransport(app=backend)
     with TestClient(server.app, headers={"Authorization": "Bearer github_pat_fake"}) as c:
+        c.server = server
         yield c
 
 
@@ -32,12 +33,12 @@ def _card(text="Soot from burning cities would block sunlight.", spans=()):
 
 
 def test_save_then_diverge(passthrough, fake_gh):
-    src = passthrough.post("/sources", json={"title": "Winter", "content": source_file(
+    src = passthrough.post(f"/repos/{REPO}/sources", json={"title": "Winter", "content": source_file(
         {"issue": None, "title": "Winter", "url": None, "publisher": "", "published": None, "authors": [], "cite": "", "fetched": None},
         "Soot from burning cities would block sunlight.")}).json()
     assert '"issue": %d' % src["number"] in fake_gh.get_file(REPO, f"sources/{src['number']}.md")
 
-    created = passthrough.post("/cards", json={"title": "Soot", "labels": ["scythe:card", "topic:t"], "content": card_file(_card())})
+    created = passthrough.post(f"/repos/{REPO}/cards", json={"title": "Soot", "labels": ["scythe:card", "topic:t"], "content": card_file(_card())})
     assert created.status_code == 201, created.text
     n, base = created.json()["number"], created.json()["sha"]
     path = f"cards/{n}.md"
@@ -48,10 +49,10 @@ def test_save_then_diverge(passthrough, fake_gh):
     theirs = {**current, "spans": [{"label": "highlight", "key": "sc", "style": "highlight", "start_char": 10, "end_char": 16, "src": "manual"}]}
 
     # Someone else saves first, from the same base...
-    first = passthrough.put(f"/cards/{n}", json={"content": card_file(theirs), "sha": base, "message": "highlight: burning"})
+    first = passthrough.put(f"/repos/{REPO}/cards/{n}", json={"content": card_file(theirs), "sha": base, "message": "highlight: burning"})
     assert first.status_code == 200, first.text
     # ...so my save from the old base diverges, and I get their version back.
-    second = passthrough.put(f"/cards/{n}", json={"content": card_file(mine), "sha": base, "message": "underline: Soot"})
+    second = passthrough.put(f"/repos/{REPO}/cards/{n}", json={"content": card_file(mine), "sha": base, "message": "underline: Soot"})
     assert second.status_code == 409
     body = second.json()
     assert body["diverged"] and body["theirs"]["sha"] == first.json()["sha"]
@@ -60,14 +61,24 @@ def test_save_then_diverge(passthrough, fake_gh):
 
     # Rebasing my change onto theirs fast-forwards.
     rebased = {**theirs, "spans": theirs["spans"] + mine["spans"]}
-    ok = passthrough.put(f"/cards/{n}", json={"content": card_file(rebased), "sha": body["theirs"]["sha"], "message": "underline: Soot"})
+    ok = passthrough.put(f"/repos/{REPO}/cards/{n}", json={"content": card_file(rebased), "sha": body["theirs"]["sha"], "message": "underline: Soot"})
     assert ok.status_code == 200
     assert [c["message"] for c in fake_gh.commits(REPO, path)] == ["underline: Soot", "highlight: burning", f"card: Soot (#{n})"]
 
 
 def test_requires_token_and_fetch_issue(passthrough, fake_gh):
     anon = TestClient(passthrough.app)
-    assert anon.put("/cards/1", json={"content": "x", "sha": "y", "message": "z"}).status_code == 401
-    out = passthrough.post("/sources", json={"title": "", "url": "https://example.org/a"}).json()
+    assert anon.put(f"/repos/{REPO}/cards/1", json={"content": "x", "sha": "y", "message": "z"}).status_code == 401
+    out = passthrough.post(f"/repos/{REPO}/sources", json={"title": "", "url": "https://example.org/a"}).json()
     issue = fake_gh.get_issue(REPO, out["number"])
     assert out["fetching"] and [lb["name"] for lb in issue["labels"]] == ["scythe:fetch"] and "https://example.org/a" in issue["body"]
+
+
+def test_repo_comes_from_the_path(passthrough):
+    body = {"title": "Soot", "labels": ["scythe:card"], "content": card_file(_card())}
+    assert passthrough.post("/repos/../cards", json=body).status_code == 404
+    passthrough.server.REPOS = {"someone/else"}
+    r = passthrough.post(f"/repos/{REPO}/cards", json=body)
+    assert r.status_code == 403 and REPO in r.json()["detail"]
+    passthrough.server.REPOS = {REPO}
+    assert passthrough.post(f"/repos/{REPO}/cards", json=body).status_code == 201

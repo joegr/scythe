@@ -26,8 +26,8 @@ export default function DataPage() {
       <section className="gap">
         <h1>Training data</h1>
         <p>
-          Every card issue is also snapshotted to <code>archive/</code> in the repo by the GitHub Action, with spaCy token offsets.
-          The local API ({config.localApi()}) indexes the issues for spaCy exports and training.
+          Every card is a file in <code>cards/</code>, and the GitHub Action writes its spaCy token offsets into the card's issue.
+          The local API{config.localApi() ? ` (${config.localApi()})` : ''} indexes the issues for spaCy exports and training.
         </p>
         {down && <p className="note">{down}</p>}
         {message && <p className="note">{message}</p>}

@@ -3,7 +3,7 @@
  *
  * Repo: VITE_SCYTHE_REPO at build time, else derived from the Pages URL (<owner>.github.io/<repo>/),
  * overridable per browser. Sign-in: a fine-grained token created from a pre-filled GitHub link
- * (Issues: write on this one repo), stored only in this browser. Reads work without a token
+ * (Contents and Issues: write on the chosen repo), stored only in this browser. Reads work without a token
  * because the repo is public.
  */
 
@@ -25,18 +25,17 @@ function repoFromLocation(): string | null {
 export const config = {
   repo: () => get(KEYS.repo) || import.meta.env.VITE_SCYTHE_REPO || repoFromLocation() || '',
   setRepo: (r: string | null) => put(KEYS.repo, r?.trim() || null),
-  /** https://api.github.com, or the local fake (http://localhost:8000/fakegh) for offline work. */
+  /** https://api.github.com (or a GitHub Enterprise API). */
   apiBase: () => (get(KEYS.api) || import.meta.env.VITE_GITHUB_API || 'https://api.github.com').replace(/\/$/, ''),
   setApiBase: (u: string | null) => put(KEYS.api, u?.trim() || null),
-  /** Optional local Scythe API (article fetching, index, training). */
-  localApi: () => (get(KEYS.localApi) || import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, ''),
+  /** Optional local Scythe API (index, training). Only `npm run dev` assumes one; the Pages build has none unless set here. */
+  localApi: () => (get(KEYS.localApi) || import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/$/, ''),
   setLocalApi: (u: string | null) => put(KEYS.localApi, u?.trim() || null),
   /** The Fly passthrough that commits cards and spans (VITE_SERVER_URL at build time). */
-  server: () => (get(KEYS.server) || import.meta.env.VITE_SERVER_URL || 'http://localhost:8080').replace(/\/$/, ''),
+  server: () => (get(KEYS.server) || import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:8081' : '')).replace(/\/$/, ''),
   setServer: (u: string | null) => put(KEYS.server, u?.trim() || null),
   token: () => get(KEYS.token),
   setToken: (t: string | null) => put(KEYS.token, t?.trim() || null),
-  isFake: () => /\/fakegh$/.test((get(KEYS.api) || import.meta.env.VITE_GITHUB_API || '').replace(/\/$/, '')),
 }
 
 /** GitHub's pre-filled fine-grained token page: Contents + Issues read & write, 30 days. Pick the repo there. */
@@ -144,12 +143,13 @@ export async function server<T>(method: string, path: string, body: unknown): Pr
   const token = config.token()
   let res: Response
   try {
-    res = await fetch(`${config.server()}${path}`, {
+    if (!config.server()) throw new TypeError('no server')
+    res = await fetch(`${config.server()}/repos/${config.repo()}${path}`, {
       method, body: JSON.stringify(body),
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
   } catch {
-    throw new GitHubError(0, `Can't reach the Scythe server at ${config.server()}.`)
+    throw new GitHubError(0, config.server() ? `Can't reach the Scythe server at ${config.server()}.` : 'No Scythe server is set; add one in settings.')
   }
   if (res.status === 409) throw new Diverged((await res.json()).theirs)
   if (!res.ok) {

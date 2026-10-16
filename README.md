@@ -30,9 +30,13 @@ On the Pages site, click **sign in**. It opens GitHub's pre-filled token page: a
 2. Set **Settings → Pages → Source** to **GitHub Actions**. `pages.yml` deploys the site at `https://<owner>.github.io/<repo>/`, and the app detects the repo from that URL.
 3. Nothing else: `scythe.yml` runs on issue events with the built-in `GITHUB_TOKEN`. To process and snapshot existing issues, run it manually (`workflow_dispatch`).
 
-### Offline
+### More than one repo
 
-Run `make db` and `SCYTHE_GITHUB_FAKE=1 make api`, then `make web`. In the app's settings, choose **local fake**: the API's `/fakegh` mimics the GitHub REST endpoints the app uses. Any token works.
+Any public repo can hold cards: copy `.github/workflows/` and `.github/fetcher/` into it, enable Pages or not, and pick it under **settings → Repository** in the app. The passthrough takes the repo from the request (`/repos/<owner>/<repo>/cards`) and writes as whoever's token it carries, so GitHub decides who can write where. Set `SCYTHE_REPOS=owner/a,owner/b` on the server to limit it to specific repos.
+
+### Local development
+
+Everything runs against the real GitHub API; there is no offline mode. `make web` (Vite) defaults to the passthrough on `localhost:8081` (`make server`) and the local API on `localhost:8000`. The Pages build has no local API unless a user adds one in settings.
 
 ## Run it
 
@@ -41,8 +45,9 @@ Requires Docker, [uv](https://docs.astral.sh/uv/) and Node 20+.
 ```bash
 make install
 make db      # Postgres 16 + pgvector on localhost:5544 (also creates scythe_test)
-make api     # migrations + FastAPI on :8000
-make web     # Vite on :5173, calling the API on :8000 cross-origin (same as GitHub Pages)
+make api     # migrations + FastAPI on :8000 (optional: index, exports, training)
+make server  # the passthrough on :8081, committing to real GitHub
+make web     # Vite on :5173
 make test    # pytest + tsc + eslint
 ```
 
@@ -63,7 +68,7 @@ SCYTHE_GITHUB_CLIENT_SECRET=...
 SCYTHE_GITHUB_APP_SLUG=your-app-name
 ```
 
-To work offline, set `SCYTHE_GITHUB_FAKE=1`. The fake GitHub keeps its issues in `.fake-github.json`; the tests always use it.
+The tests run against an in-process fake GitHub (`SCYTHE_GITHUB_FAKE=1`, set by `backend/tests/conftest.py`); nothing else uses it.
 
 ### How a card is stored
 

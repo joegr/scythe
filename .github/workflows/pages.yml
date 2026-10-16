@@ -38,7 +38,6 @@ jobs:
       - run: npx vite build
         env:
           VITE_SERVER_URL: ${{ vars.SCYTHE_SERVER_URL }}
-          VITE_API_URL: ${{ vars.SCYTHE_API_URL || 'http://localhost:8000' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist

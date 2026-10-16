@@ -1,7 +1,6 @@
-"""A GitHub REST emulator over FakeGitHub, mounted at /fakegh when SCYTHE_GITHUB_FAKE=1.
+"""A GitHub REST emulator over FakeGitHub, mounted at /fakegh when SCYTHE_GITHUB_FAKE=1 (tests only).
 
-The Pages app talks to GitHub directly; pointing it at this lets the whole browser flow run offline
-(and in tests) against the exact endpoints it uses on api.github.com. Not for production.
+The passthrough tests point at it to exercise the exact endpoints the app uses on api.github.com.
 """
 
 import re

@@ -109,13 +109,9 @@ function Settings({ onDone }: { onDone: () => void }) {
         <input className="field" placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)} />
         <label>GitHub API</label>
         <input className="field" value={api} onChange={(e) => setApi(e.target.value)} />
-        <p>
-          <button className="link" onClick={() => setApi('https://api.github.com')}>GitHub</button>{' '}
-          <button className="link" onClick={() => { setApi('http://localhost:8000/fakegh'); setRepo('scythe-dev/cards'); setSrv('http://localhost:8080') }}>local fake (offline)</button>
-        </p>
         <label>Scythe server (commits cards and spans)</label>
         <input className="field" value={srv} onChange={(e) => setSrv(e.target.value)} />
-        <label>Local Scythe API (optional: search index, training)</label>
+        <label>Local Scythe API (optional: search index, training; e.g. http://localhost:8000)</label>
         <input className="field" value={localApi} onChange={(e) => setLocalApi(e.target.value)} />
         <button className="action" disabled={!/^[\w.-]+\/[\w.-]+$/.test(repo.trim())} onClick={() => {
           const switchedApi = api.trim() !== config.apiBase()

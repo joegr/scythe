@@ -6,6 +6,7 @@ export async function local<T>(method: string, path: string, body?: unknown): Pr
   const token = config.token()
   if (token) headers.Authorization = `Bearer ${token}`
   if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (!config.localApi()) throw new Error('No local Scythe API is set. Run make api and add http://localhost:8000 in settings.')
   let res: Response
   try {
     res = await fetch(`${config.localApi()}/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
@@ -25,6 +26,7 @@ export async function localDownload(path: string, name: string) {
   const headers: Record<string, string> = {}
   const token = config.token()
   if (token) headers.Authorization = `Bearer ${token}`
+  if (!config.localApi()) throw new Error('No local Scythe API is set.')
   const res = await fetch(`${config.localApi()}/api${path}`, { headers })
   if (!res.ok) throw new Error(`Download failed: ${res.status}`)
   const url = URL.createObjectURL(await res.blob())

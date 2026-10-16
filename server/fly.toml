@@ -5,7 +5,6 @@ primary_region = "iad"
 [build]
 
 [env]
-  SCYTHE_REPO = "joegr/scythe"
   ALLOWED_ORIGINS = "https://joegr.github.io,http://localhost:5173,http://localhost:4173"
 
 [http_service]

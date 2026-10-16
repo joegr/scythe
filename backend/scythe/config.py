@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     github_client_id: str = ""
     github_client_secret: str = ""
     github_app_slug: str = ""  # for the "install on a repo" link
-    # Use an in-memory/on-disk fake GitHub instead of api.github.com (tests, offline dev).
+    # Tests only: an in-process fake GitHub instead of api.github.com.
     github_fake: bool = False
-    github_fake_path: Path | None = ROOT / ".fake-github.json"
+    github_fake_path: Path | None = None
     # Fernet key for encrypting GitHub tokens at rest; generated into .scythe-secret if unset.
     secret_key: str = ""
     session_days: int = 14

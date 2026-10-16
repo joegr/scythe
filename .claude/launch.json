@@ -2,11 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "api-fake-github",
-      "runtimeExecutable": "env",
+      "name": "api",
+      "runtimeExecutable": "uv",
       "runtimeArgs": [
-        "SCYTHE_GITHUB_FAKE=1",
-        "uv",
         "--directory",
         "backend",
         "run",
@@ -19,11 +17,9 @@
       "port": 8000
     },
     {
-      "name": "server-fake",
+      "name": "server",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "SCYTHE_REPO=scythe-dev/cards",
-        "GITHUB_API=http://localhost:8000/fakegh",
         "ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173",
         "uv",
         "--directory",
@@ -34,12 +30,12 @@
         "../server",
         "main:app",
         "--port",
-        "8080",
+        "8081",
         "--reload",
         "--reload-dir",
         "../server"
       ],
-      "port": 8080
+      "port": 8081
     },
     {
       "name": "web",
